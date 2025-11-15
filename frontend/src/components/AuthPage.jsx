@@ -34,37 +34,57 @@ const AuthPage = () => {
     setSuccess('');
   };
 
-  const handleLogin = async () => {
-    setLoading(true);
-    setError('');
+const handleLogin = async () => {
+  // 🔊 Reproducir sonido al hacer clic en el botón "Ingresar"
+  const clickSound = new Audio('/sounds/sucess.mp3');
+  clickSound.volume = 0.5; // volumen entre 0 y 1
+  clickSound.play().catch(err => console.log("No se pudo reproducir el sonido:", err));
 
-    try {
-      const response = await fetch('http://localhost:8000/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username_or_email: formData.usernameOrEmail,
-          password: formData.password
-        })
-      });
+  setLoading(true);
+  setError('');
 
-      const data = await response.json();
+  try {
+    const response = await fetch('http://localhost:8000/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username_or_email: formData.usernameOrEmail,
+        password: formData.password
+      })
+    });
 
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error en la autenticación');
-      }
+    const data = await response.json();
 
-      localStorage.setItem('token', data.access_token);
-      localStorage.setItem('username', data.username);
-      
-      window.location.href = '/upload';
-      
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(data.detail || 'Error en la autenticación');
     }
-  };
+
+    // ✅ Si el login es correcto, guarda los datos y reproduce otro sonido
+    localStorage.setItem('token', data.access_token);
+    localStorage.setItem('username', data.username);
+
+    const successSound = new Audio('/sounds/doom_login.mp3');
+      successSound.volume = 0.6;
+      successSound.play();
+
+      // Redirigir medio segundo después
+      setTimeout(() => {
+        window.location.href = '/upload';
+      }, 2000);
+    
+  } catch (err) {
+    setError(err.message);
+
+    // ❌ Sonido de error
+    const errorSound = new Audio('/sounds/error.mp3');
+    errorSound.volume = 0.6;
+    errorSound.play();
+    
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleRegister = async () => {
     setLoading(true);
