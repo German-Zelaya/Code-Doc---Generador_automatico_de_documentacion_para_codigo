@@ -5,6 +5,7 @@ const AIModelView = () => {
   const [originalCode, setOriginalCode] = useState('');
   const [documentedCode, setDocumentedCode] = useState('');
   const [filename, setFilename] = useState('');
+  const [language, setLanguage] = useState('python');
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -14,17 +15,19 @@ const AIModelView = () => {
     // Obtener datos del análisis previo (desde localStorage o props)
     const storedCode = localStorage.getItem('uploaded_code');
     const storedFilename = localStorage.getItem('uploaded_filename');
+    const storedLanguage = localStorage.getItem('detected_language') || 'python';
     
     if (storedCode && storedFilename) {
       setOriginalCode(storedCode);
       setFilename(storedFilename);
-      generateDocumentation(storedCode, storedFilename);
+      setLanguage(storedLanguage);
+      generateDocumentation(storedCode, storedFilename, storedLanguage);
     } else {
       setError('No hay código para documentar. Por favor sube un archivo primero.');
     }
   }, []);
 
-  const generateDocumentation = async (code, fname) => {
+  const generateDocumentation = async (code, fname, lang) => {
     setLoading(true);
     setError('');
     setStep('generating');
@@ -33,7 +36,7 @@ const AIModelView = () => {
       const response = await fetch('http://localhost:8000/api/generate-documentation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, filename: fname })
+        body: JSON.stringify({ code, filename: fname, language: lang })
       });
 
       const data = await response.json();
@@ -64,6 +67,7 @@ const AIModelView = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           code: originalCode,
+          language: language,
           feedback: 'Genera una versión diferente y más detallada'
         })
       });
@@ -85,9 +89,10 @@ const AIModelView = () => {
   };
 
   const handleAccept = () => {
-    // Guardar el código documentado para la siguiente fase
+    // Guardar el código documentado y el lenguaje para la siguiente fase
     localStorage.setItem('documented_code', documentedCode);
     localStorage.setItem('final_filename', filename);
+    localStorage.setItem('final_language', language);
     
     // Redirigir a la pantalla de documentación generada
     window.location.href = '/documentation-result';

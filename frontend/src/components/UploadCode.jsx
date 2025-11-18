@@ -74,11 +74,12 @@ const UploadCode = () => {
 
       setAnalysis(data);
       
-      // Guardar el código para la siguiente fase
+      // Guardar el código y el lenguaje para la siguiente fase
       const reader = new FileReader();
       reader.onload = (e) => {
         localStorage.setItem('uploaded_code', e.target.result);
         localStorage.setItem('uploaded_filename', file.name);
+        localStorage.setItem('detected_language', data.language);
       };
       reader.readAsText(file);
       
@@ -169,7 +170,7 @@ const UploadCode = () => {
                 o haz click para seleccionar
               </p>
               <p className="text-gray-500 text-xs">
-                Formatos soportados: Python, JavaScript, Java, C++, C#, PHP, Ruby, Go
+                Formatos soportados: Python, JavaScript, PHP, Go
               </p>
             </label>
           </div>

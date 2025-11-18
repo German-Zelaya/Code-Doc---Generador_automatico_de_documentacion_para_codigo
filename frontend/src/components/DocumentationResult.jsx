@@ -4,6 +4,7 @@ import { FileText, Edit3, Save, Download, CheckCircle, AlertCircle } from 'lucid
 const DocumentationResult = () => {
   const [documentedCode, setDocumentedCode] = useState('');
   const [filename, setFilename] = useState('');
+  const [language, setLanguage] = useState('python');
   const [isEditing, setIsEditing] = useState(false);
   const [editedCode, setEditedCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,18 +16,20 @@ const DocumentationResult = () => {
     // Obtener el código documentado de la fase anterior
     const storedCode = localStorage.getItem('documented_code');
     const storedFilename = localStorage.getItem('final_filename');
+    const storedLanguage = localStorage.getItem('final_language') || 'python';
     
     if (storedCode && storedFilename) {
       setDocumentedCode(storedCode);
       setEditedCode(storedCode);
       setFilename(storedFilename);
-      generatePreview(storedCode, storedFilename);
+      setLanguage(storedLanguage);
+      generatePreview(storedCode, storedFilename, storedLanguage);
     } else {
       setError('No hay documentación para mostrar. Por favor completa el proceso anterior.');
     }
   }, []);
 
-  const generatePreview = async (code, fname) => {
+  const generatePreview = async (code, fname, lang) => {
     setLoading(true);
     try {
       const response = await fetch('http://localhost:8000/api/accept-documentation', {
@@ -34,7 +37,8 @@ const DocumentationResult = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           documented_code: code,
-          filename: fname
+          filename: fname,
+          language: lang
         })
       });
 
@@ -57,7 +61,7 @@ const DocumentationResult = () => {
     setDocumentedCode(editedCode);
     setIsEditing(false);
     setSuccess('Cambios guardados exitosamente');
-    generatePreview(editedCode, filename);
+    generatePreview(editedCode, filename, language);
     
     setTimeout(() => setSuccess(''), 3000);
   };

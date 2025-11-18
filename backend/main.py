@@ -105,14 +105,17 @@ class UserResponse(BaseModel):
 class DocumentationRequest(BaseModel):
     code: str
     filename: str
+    language: str = 'python'  # Agregar lenguaje
 
 class RegenerateRequest(BaseModel):
     code: str
+    language: str = 'python'  # Agregar lenguaje
     feedback: str = None
 
 class AcceptDocumentationRequest(BaseModel):
     documented_code: str
     filename: str
+    language: str = 'python'  # Agregar lenguaje
 
 class ExportRequest(BaseModel):
     documented_code: str
@@ -367,6 +370,20 @@ LANGUAGE_PATTERNS = {
         'class_pattern': r'(?:public|private)?\s*class\s+\w+',
         'docstring_pattern': r'/\*\*[\s\S]*?\*/',
         'comment_pattern': r'//.*$|/\*[\s\S]*?\*/'
+    },
+    'php': {
+        'extensions': ['.php'],
+        'function_pattern': r'function\s+\w+\s*\([^)]*\)\s*{',
+        'class_pattern': r'class\s+\w+\s*{',
+        'docstring_pattern': r'/\*\*[\s\S]*?\*/',
+        'comment_pattern': r'//.*$|/\*[\s\S]*?\*/'
+    },
+     'go': {
+        'extensions': ['.go'],
+        'function_pattern': r'func\s+(?:\(\w+\s+\*?\w+\)\s+)?\w+\s*\([^)]*\)',
+        'class_pattern': r'type\s+\w+\s+struct',
+        'docstring_pattern': r'//.*\n(?://.*\n)*func',
+        'comment_pattern': r'//.*$|/\*[\s\S]*?\*/'
     }
 }
 
@@ -435,7 +452,7 @@ async def analyze_code_file(file: UploadFile = File(...)):
         if language == 'unknown':
             raise HTTPException(
                 status_code=400, 
-                detail="Tipo de archivo no soportado. Soportamos: Python, JavaScript, Java"
+                detail="Tipo de archivo no soportado. Soportamos: Python, JavaScript, PHP, Go"
             )
         
         analysis = analyze_code(code, language)
@@ -454,7 +471,7 @@ async def analyze_code_file(file: UploadFile = File(...)):
 async def generate_documentation(request: DocumentationRequest):
     """Generar documentación usando el modelo de IA"""
     try:
-        result = generate_documentation_suggestions(request.code)
+        result = generate_documentation_suggestions(request.code, request.language)
         
         if not result["success"]:
             raise HTTPException(status_code=500, detail=result.get("message", "Error al generar documentación"))
@@ -463,6 +480,7 @@ async def generate_documentation(request: DocumentationRequest):
             "success": True,
             "documented_code": result["documented_code"],
             "original_code": result["original_code"],
+            "language": result.get("language", request.language),
             "statistics": result["statistics"],
             "filename": request.filename
         }
@@ -474,7 +492,7 @@ async def generate_documentation(request: DocumentationRequest):
 async def regenerate_doc(request: RegenerateRequest):
     """Regenerar documentación con feedback"""
     try:
-        result = regenerate_documentation(request.code, request.feedback)
+        result = regenerate_documentation(request.code, request.language, request.feedback)
         
         if not result["success"]:
             raise HTTPException(status_code=500, detail=result.get("message", "Error al regenerar"))
@@ -482,6 +500,7 @@ async def regenerate_doc(request: RegenerateRequest):
         return {
             "success": True,
             "documented_code": result["documented_code"],
+            "language": result.get("language", request.language),
             "statistics": result["statistics"]
         }
         
@@ -492,7 +511,7 @@ async def regenerate_doc(request: RegenerateRequest):
 async def accept_doc(request: AcceptDocumentationRequest):
     """Aceptar documentación y generar documento final"""
     try:
-        final_doc = generate_final_document(request.documented_code, request.filename)
+        final_doc = generate_final_document(request.documented_code, request.filename, request.language)
         
         return {
             "success": True,
@@ -541,3 +560,4 @@ async def export_document(request: ExportRequest):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+# Fin del archivo
