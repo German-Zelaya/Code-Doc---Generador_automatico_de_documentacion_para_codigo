@@ -4,6 +4,12 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 import markdown
 from datetime import datetime
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.pdfgen import canvas
 
 def create_docx(documented_code: str, filename: str, original_filename: str) -> BytesIO:
     """
@@ -76,100 +82,98 @@ def create_docx(documented_code: str, filename: str, original_filename: str) -> 
 
 def create_pdf_simple(documented_code: str, filename: str, original_filename: str) -> BytesIO:
     """
-    Genera un PDF simple usando HTML y weasyprint.
-    Si weasyprint falla, genera un HTML que el usuario puede imprimir como PDF.
+    Genera un PDF usando reportlab.
     """
     try:
-        from weasyprint import HTML, CSS
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, 
+                              rightMargin=72, leftMargin=72,
+                              topMargin=72, bottomMargin=18)
         
-        # HTML para el PDF
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                @page {{
-                    size: A4;
-                    margin: 2cm;
-                }}
-                body {{
-                    font-family: 'Courier New', monospace;
-                    line-height: 1.6;
-                    color: #333;
-                }}
-                .header {{
-                    text-align: center;
-                    margin-bottom: 30px;
-                    padding-bottom: 20px;
-                    border-bottom: 3px solid #dc2626;
-                }}
-                h1 {{
-                    color: #dc2626;
-                    font-size: 32px;
-                    margin: 0;
-                }}
-                .info {{
-                    color: #666;
-                    font-size: 14px;
-                    margin-top: 10px;
-                }}
-                .code-section {{
-                    background: #f5f5f5;
-                    padding: 20px;
-                    border-left: 4px solid #ea580c;
-                    margin: 20px 0;
-                }}
-                pre {{
-                    margin: 0;
-                    white-space: pre-wrap;
-                    word-wrap: break-word;
-                    font-size: 10px;
-                }}
-                .footer {{
-                    margin-top: 50px;
-                    padding-top: 20px;
-                    border-top: 1px solid #ccc;
-                    text-align: center;
-                    color: #999;
-                    font-size: 10px;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>Documentación de Código</h1>
-                <div class="info">
-                    <strong>Archivo:</strong> {original_filename}<br>
-                    <strong>Generado:</strong> {datetime.now().strftime("%d/%m/%Y %H:%M")}
-                </div>
-            </div>
-            
-            <h2 style="color: #ea580c;">Código Documentado</h2>
-            <div class="code-section">
-                <pre>{documented_code}</pre>
-            </div>
-            
-            <div class="footer">
-                Universidad Mayor Real y Pontificia de San Francisco Xavier de Chuquisaca<br>
-                Proyecto de Taller de Especialidad - SHC131<br>
-                Generador Automático de Documentación de Código
-            </div>
-        </body>
-        </html>
-        """
+        # Estilos
+        styles = getSampleStyleSheet()
         
-        # Generar PDF
-        file_stream = BytesIO()
-        HTML(string=html_content).write_pdf(file_stream)
-        file_stream.seek(0)
+        # Estilo de título
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor='#dc2626',
+            spaceAfter=30,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
         
-        return file_stream
+        # Estilo de subtítulo
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor='#666666',
+            spaceAfter=20,
+            alignment=TA_CENTER
+        )
+        
+        # Estilo de código
+        code_style = ParagraphStyle(
+            'Code',
+            parent=styles['Code'],
+            fontSize=8,
+            leftIndent=20,
+            fontName='Courier',
+            spaceAfter=12
+        )
+        
+        # Contenido del PDF
+        story = []
+        
+        # Título
+        story.append(Paragraph("Documentación de Código", title_style))
+        story.append(Spacer(1, 12))
+        
+        # Información del archivo
+        story.append(Paragraph(f"<b>Archivo:</b> {original_filename}", subtitle_style))
+        story.append(Paragraph(f"<b>Generado:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}", subtitle_style))
+        story.append(Spacer(1, 30))
+        
+        # Sección de código
+        story.append(Paragraph("<b>Código Documentado</b>", styles['Heading2']))
+        story.append(Spacer(1, 12))
+        
+        # Agregar código en bloques (para evitar problemas con código muy largo)
+        code_lines = documented_code.split('\n')
+        code_text = '<br/>'.join([line.replace('<', '&lt;').replace('>', '&gt;') for line in code_lines])
+        
+        # Usar Preformatted para el código
+        story.append(Preformatted(documented_code, code_style))
+        story.append(Spacer(1, 30))
+        
+        # Footer
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor='#999999',
+            alignment=TA_CENTER
+        )
+        
+        story.append(Spacer(1, 50))
+        story.append(Paragraph(
+            "Universidad Mayor Real y Pontificia de San Francisco Xavier de Chuquisaca<br/>"
+            "Proyecto de Taller de Especialidad - SHC131<br/>"
+            "Generador Automático de Documentación de Código",
+            footer_style
+        ))
+        
+        # Construir PDF
+        doc.build(story)
+        buffer.seek(0)
+        
+        return buffer
         
     except Exception as e:
-        print(f"Error generando PDF con weasyprint: {e}")
-        # Si falla, retornar None para que el backend maneje el error
-        raise Exception("Error al generar PDF. Intenta con formato DOCX.")
+        print(f"Error generando PDF: {e}")
+        raise Exception(f"Error al generar PDF: {str(e)}")
 
 def create_markdown_document(documented_code: str, filename: str, original_filename: str) -> str:
     """

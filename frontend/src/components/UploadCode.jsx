@@ -4,6 +4,7 @@ import { Upload, FileCode, CheckCircle, XCircle, BarChart3, LogOut } from 'lucid
 const UploadCode = () => {
   const [file, setFile] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [codePreview, setCodePreview] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -74,10 +75,12 @@ const UploadCode = () => {
 
       setAnalysis(data);
       
-      // Guardar el código y el lenguaje para la siguiente fase
+      // Guardar el código y el lenguaje para la siguiente fase Y mostrar preview
       const reader = new FileReader();
       reader.onload = (e) => {
-        localStorage.setItem('uploaded_code', e.target.result);
+        const code = e.target.result;
+        setCodePreview(code);
+        localStorage.setItem('uploaded_code', code);
         localStorage.setItem('uploaded_filename', file.name);
         localStorage.setItem('detected_language', data.language);
       };
@@ -170,7 +173,7 @@ const UploadCode = () => {
                 o haz click para seleccionar
               </p>
               <p className="text-gray-500 text-xs">
-                Formatos soportados: Python, JavaScript, PHP, Go
+                Formatos soportados: Python, JavaScript, Java, C++, C#, PHP, Ruby, Go
               </p>
             </label>
           </div>
@@ -280,6 +283,21 @@ const UploadCode = () => {
                 </p>
               </div>
             </div>
+
+            {/* Code Preview Section */}
+            {codePreview && (
+              <div className="bg-black/60 backdrop-blur-sm border-2 border-orange-900/50 rounded-lg p-6 shadow-2xl shadow-orange-900/20 mt-6">
+                <h2 className="text-xl font-black text-white mb-4 flex items-center gap-2">
+                  <FileCode className="w-5 h-5 text-orange-500" />
+                  PREVISUALIZACIÓN DEL CÓDIGO
+                </h2>
+                <div className="bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">
+                  <pre className="text-gray-300 text-sm font-mono whitespace-pre-wrap">
+                    {codePreview}
+                  </pre>
+                </div>
+              </div>
+            )}
 
             {/* Next Step Button */}
             <div className="text-center">
