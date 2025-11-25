@@ -173,7 +173,7 @@ const UploadCode = () => {
                 o haz click para seleccionar
               </p>
               <p className="text-gray-500 text-xs">
-                Formatos soportados: Python, JavaScript, Java, C++, C#, PHP, Ruby, Go
+                Formatos soportados: Python, JavaScript, PHP, Go
               </p>
             </label>
           </div>

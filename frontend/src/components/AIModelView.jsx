@@ -139,7 +139,7 @@ const AIModelView = () => {
             MODELO IA
           </h1>
           <p className="text-gray-400 text-sm tracking-widest">
-            Documentación generada con Ollama (llama3.2)
+            Documentación Generada
           </p>
         </div>
 

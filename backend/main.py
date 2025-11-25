@@ -121,6 +121,7 @@ class ExportRequest(BaseModel):
     documented_code: str
     filename: str
     format: str  # 'docx', 'pdf', 'markdown'
+    user_email: str = None # Email del usuario
 
 # Dependencias
 def get_db():
@@ -519,6 +520,33 @@ async def accept_doc(request: AcceptDocumentationRequest):
             "message": "Documentación aceptada y documento generado"
         }
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+@app.post("/api/export-n8n")
+async def export_with_n8n(request: ExportRequest):
+    """Exportar documento usando n8n"""
+    try:
+        import requests
+        
+        # URL del webhook de n8n (la que copiaste)
+        n8n_webhook_url = "http://localhost:5678/webhook-test/export-document"
+        
+        # Enviar datos a n8n
+        payload = {
+            "documented_code": request.documented_code,
+            "filename": request.filename,
+            "format": request.format,
+            "user_email": request.user_email  # Agregaremos esto
+        }
+        
+        response = requests.post(n8n_webhook_url, json=payload)
+        
+        if response.status_code == 200:
+            return {"success": True, "message": "Documento enviado a n8n para procesamiento"}
+        else:
+            raise HTTPException(status_code=500, detail="Error al comunicarse con n8n")
+            
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 

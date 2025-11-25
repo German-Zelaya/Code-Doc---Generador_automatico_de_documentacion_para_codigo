@@ -5,6 +5,8 @@ const ExportPage = () => {
   const [documentedCode, setDocumentedCode] = useState('');
   const [filename, setFilename] = useState('');
   const [selectedFormat, setSelectedFormat] = useState('docx');
+  const [exportMethod, setExportMethod] = useState('direct'); // 'direct' o 'n8n'
+  const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -26,39 +28,64 @@ const ExportPage = () => {
     setError('');
     setSuccess('');
 
+    if (exportMethod === 'n8n' && !userEmail) {
+      setError('Por favor ingresa tu email para recibir el documento');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch('http://localhost:8000/api/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          documented_code: documentedCode,
-          filename: filename,
-          format: selectedFormat
-        })
-      });
+      if (exportMethod === 'direct') {
+        // Descarga directa (como antes)
+        const response = await fetch('http://localhost:8000/api/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            documented_code: documentedCode,
+            filename: filename,
+            format: selectedFormat
+          })
+        });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al exportar');
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.detail || 'Error al exportar');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        const extension = selectedFormat === 'docx' ? '.docx' : selectedFormat === 'pdf' ? '.pdf' : '.md';
+        a.download = `${filename.replace('.py', '').replace('.js', '').replace('.php', '').replace('.go', '')}_documented${extension}`;
+        
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        setSuccess(`¡Archivo descargado exitosamente en formato ${selectedFormat.toUpperCase()}!`);
+        
+      } else {
+        // Envío por n8n
+        const response = await fetch('http://localhost:5678/webhook/export-document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            documented_code: documentedCode,
+            filename: filename,
+            format: selectedFormat,
+            user_email: userEmail
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Error al procesar con n8n');
+        }
+
+        setSuccess('¡Documento enviado! Recibirás un email con el archivo y el link de Google Drive en unos momentos.');
       }
-
-      // Obtener el blob del archivo
-      const blob = await response.blob();
-      
-      // Crear URL temporal y descargar
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      
-      const extension = selectedFormat === 'docx' ? '.docx' : selectedFormat === 'pdf' ? '.pdf' : '.md';
-      a.download = `${filename.replace('.py', '')}_documented${extension}`;
-      
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      setSuccess(`¡Archivo descargado exitosamente en formato ${selectedFormat.toUpperCase()}!`);
       
     } catch (err) {
       setError(err.message);
@@ -169,6 +196,79 @@ const ExportPage = () => {
           ))}
         </div>
 
+        {/* Export Method Selection */}
+        <div className="space-y-4 mb-6">
+          <h2 className="text-2xl font-black text-white mb-4">MÉTODO DE EXPORTACIÓN</h2>
+          
+          <button
+            onClick={() => setExportMethod('direct')}
+            disabled={loading}
+            className={`w-full bg-black/60 backdrop-blur-sm border-2 rounded-lg p-6 transition-all transform hover:scale-102 ${
+              exportMethod === 'direct'
+                ? 'border-red-600 shadow-lg shadow-red-600/50'
+                : 'border-gray-700 hover:border-red-800'
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <Download className="w-8 h-8 text-blue-500" />
+              <div className="flex-1 text-left">
+                <h3 className={`text-xl font-bold mb-1 ${
+                  exportMethod === 'direct' ? 'text-red-500' : 'text-white'
+                }`}>
+                  Descarga Directa
+                </h3>
+                <p className="text-gray-400 text-sm">Descargar el archivo inmediatamente a tu computadora</p>
+              </div>
+              {exportMethod === 'direct' && (
+                <CheckCircle className="w-8 h-8 text-red-500" />
+              )}
+            </div>
+          </button>
+
+          <button
+            onClick={() => setExportMethod('n8n')}
+            disabled={loading}
+            className={`w-full bg-black/60 backdrop-blur-sm border-2 rounded-lg p-6 transition-all transform hover:scale-102 ${
+              exportMethod === 'n8n'
+                ? 'border-red-600 shadow-lg shadow-red-600/50'
+                : 'border-gray-700 hover:border-red-800'
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <div className="text-4xl">☁️</div>
+              <div className="flex-1 text-left">
+                <h3 className={`text-xl font-bold mb-1 ${
+                  exportMethod === 'n8n' ? 'text-red-500' : 'text-white'
+                }`}>
+                  Envío Automático (n8n)
+                </h3>
+                <p className="text-gray-400 text-sm">Guardar en Google Drive y recibir por email</p>
+              </div>
+              {exportMethod === 'n8n' && (
+                <CheckCircle className="w-8 h-8 text-red-500" />
+              )}
+            </div>
+          </button>
+
+          {exportMethod === 'n8n' && (
+            <div className="bg-blue-900/20 border border-blue-600/50 rounded-lg p-4 mt-4">
+              <label className="block text-gray-400 text-sm font-bold mb-2 tracking-wide">
+                TU EMAIL
+              </label>
+              <input
+                type="email"
+                value={userEmail}
+                onChange={(e) => setUserEmail(e.target.value)}
+                placeholder="correo@ejemplo.com"
+                className="w-full bg-gray-900/80 border-2 border-gray-700 focus:border-blue-600 rounded px-4 py-3 text-white placeholder-gray-600 transition-all outline-none"
+              />
+              <p className="text-gray-500 text-xs mt-2">
+                Recibirás el documento por email y se guardará en tu Google Drive
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Export Button */}
         <div className="flex flex-col gap-4">
           <button
@@ -179,12 +279,12 @@ const ExportPage = () => {
             {loading ? (
               <>
                 <Loader className="w-6 h-6 animate-spin" />
-                GENERANDO Y EXPORTANDO...
+                {exportMethod === 'n8n' ? 'PROCESANDO Y ENVIANDO...' : 'GENERANDO Y EXPORTANDO...'}
               </>
             ) : (
               <>
                 <Download className="w-6 h-6" />
-                GENERAR Y EXPORTAR
+                {exportMethod === 'n8n' ? 'ENVIAR POR EMAIL Y DRIVE' : 'GENERAR Y EXPORTAR'}
               </>
             )}
           </button>
