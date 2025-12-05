@@ -84,7 +84,7 @@ const ExportPage = () => {
           throw new Error('Error al procesar con n8n');
         }
 
-        setSuccess('¡Documento enviado! Recibirás un email con el archivo y el link de Google Drive en unos momentos.');
+        setSuccess('¡Documento enviado! Recibirás un email con el archivo y el link de Google Drive y Github en unos momentos.');
       }
       
     } catch (err) {
@@ -242,7 +242,7 @@ const ExportPage = () => {
                 }`}>
                   Envío Automático (n8n)
                 </h3>
-                <p className="text-gray-400 text-sm">Guardar en Google Drive y recibir por email</p>
+                <p className="text-gray-400 text-sm">Guardar en Google Drive y Github y recibir por email</p>
               </div>
               {exportMethod === 'n8n' && (
                 <CheckCircle className="w-8 h-8 text-red-500" />
@@ -263,7 +263,7 @@ const ExportPage = () => {
                 className="w-full bg-gray-900/80 border-2 border-gray-700 focus:border-blue-600 rounded px-4 py-3 text-white placeholder-gray-600 transition-all outline-none"
               />
               <p className="text-gray-500 text-xs mt-2">
-                Recibirás el documento por email y se guardará en tu Google Drive
+                Recibirás el documento por email y se guardará en tu Google Drive y GitHub.
               </p>
             </div>
           )}
@@ -284,7 +284,7 @@ const ExportPage = () => {
             ) : (
               <>
                 <Download className="w-6 h-6" />
-                {exportMethod === 'n8n' ? 'ENVIAR POR EMAIL Y DRIVE' : 'GENERAR Y EXPORTAR'}
+                {exportMethod === 'n8n' ? 'ENVIAR POR EMAIL' : 'GENERAR Y EXPORTAR'}
               </>
             )}
           </button>
