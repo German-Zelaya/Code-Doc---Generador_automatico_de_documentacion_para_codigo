@@ -1,0 +1,14 @@
+[Unit]
+Description=Ollama AI Model Service
+After=network.target
+
+[Service]
+Type=simple
+User=codedoc
+Environment="OLLAMA_HOST=0.0.0.0:11434"
+ExecStart=/usr/local/bin/ollama serve
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

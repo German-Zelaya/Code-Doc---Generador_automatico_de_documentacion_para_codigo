@@ -1,0 +1,141 @@
+{
+  "name": "Code Doc - Export Document",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "export-document",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "export-document"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extraer datos del webhook\nconst data = $input.first().json.body;\nconst { documented_code, filename, format, user_email } = data;\n\n// Preparar el contenido del documento\nlet content = documented_code;\nlet mimeType = 'text/plain';\nlet fileExtension = format;\n\nif (format === 'markdown') {\n  mimeType = 'text/markdown';\n  fileExtension = 'md';\n} else if (format === 'docx') {\n  mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';\n  fileExtension = 'docx';\n} else if (format === 'pdf') {\n  mimeType = 'application/pdf';\n  fileExtension = 'pdf';\n}\n\nreturn {\n  json: {\n    documented_code: content,\n    filename: filename,\n    format: format,\n    file_extension: fileExtension,\n    mime_type: mimeType,\n    user_email: user_email || null,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "process-data-node",
+      "name": "Process Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.user_email}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-email-node",
+      "name": "Check Email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "codedoc@umrpsfxch.edu.bo",
+        "toEmail": "={{$json.user_email}}",
+        "subject": "Tu documentación de código está lista",
+        "text": "Hola,\n\nTu documentación para el archivo {{$json.filename}} ha sido generada exitosamente.\n\nFormato: {{$json.format}}\nFecha: {{$json.timestamp}}\n\nSaludos,\nCode Doc Generator\nUniversidad Mayor Real y Pontificia de San Francisco Xavier de Chuquisaca",
+        "attachments": "={{$json.filename}}.{{$json.file_extension}}",
+        "options": {}
+      },
+      "id": "send-email-node",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Documento procesado exitosamente\",\n  \"filename\": \"{{$json.filename}}\",\n  \"format\": \"{{$json.format}}\",\n  \"email_sent\": {{$json.user_email ? true : false}}\n}",
+        "options": {}
+      },
+      "id": "response-node",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Documento procesado (sin email)\",\n  \"filename\": \"{{$json.filename}}\",\n  \"format\": \"{{$json.format}}\"\n}",
+        "options": {}
+      },
+      "id": "response-no-email-node",
+      "name": "Response No Email",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Data": {
+      "main": [
+        [
+          {
+            "node": "Check Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response No Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "id": "code-doc-export-workflow"
+}
